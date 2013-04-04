@@ -12,6 +12,13 @@
 
 #define PIN_SENSOR_IR 14 // analog 0
 
+//#define SPEED 255
+// times in milliseconds for driving forward/backward
+int forwardTime = 0;  
+int backTime = 0;
+
+int motorSpeed = 180;
+
 // set up the pins
 void setup()
 {
@@ -40,40 +47,75 @@ void setup()
 void loop()
 {
   
-  resetPos();
+  calibrate();
+  printStats();
+  
   while(true)
   {
-    delay(100);
+    if(Serial.available())
+    {
+      calibrate();
+      printStats();
+      Serial.read();
+    }
+     else
+       delay(100);
   }
   
 }
 
-void resetPos()
+// measure how long it takes to extend and retract
+void calibrate()
 {
-  analogWrite(PIN_PWM_A, 200);
+  int counter = 0;
+    
+  analogWrite(PIN_PWM_A, motorSpeed);
   digitalWrite(PIN_DIR_A, LOW); // extend 
-  delay(2000);
-  digitalWrite(PIN_DIR_A, HIGH); // retract until tripped
+  delay(2000); // go forward for 2 seconds
   
-  while(!digitalRead(PIN_LIMITA_B))
+  digitalWrite(PIN_DIR_A, HIGH); // retract until limit trigger
+  while(!digitalRead(PIN_LIMITA_B)) 
   {
-    delay(100);
+    delay(1);
+    counter++;
   }
+  Serial.println(counter);
   digitalWrite(PIN_PWM_A, 0);
-  digitalWrite(PIN_DIR_A, LOW); // extend 
-  analogWrite(PIN_PWM_A, 200);
   
+  counter = 0;
+  digitalWrite(PIN_DIR_A, LOW); // extend 
+  analogWrite(PIN_PWM_A, motorSpeed);
   while(!digitalRead(PIN_LIMITA_A))
   {
-    delay(100);
+    counter++;
+    delay(1);
   }
+  forwardTime = counter;
   digitalWrite(PIN_PWM_A, 0);  
+  Serial.println(counter);
   
+  counter = 0;
   digitalWrite(PIN_DIR_A, HIGH); // retract until tripped  
-  digitalWrite(PIN_PWM_A, 200);  
+  digitalWrite(PIN_PWM_A, motorSpeed);  
    while(!digitalRead(PIN_LIMITA_B))
   {
-    delay(100);
+    delay(1);
+    counter++;
   }
+ 
+  backTime = counter;
   digitalWrite(PIN_PWM_A, 0);
+  Serial.println(counter);
+}
+
+
+// print out various status parameters
+void printStats()
+{
+  Serial.print("Backward time: ");
+  Serial.print(backTime);
+  Serial.print("ms, Forward time: ");
+  Serial.print(forwardTime);
+  Serial.print("ms");
+
 }
