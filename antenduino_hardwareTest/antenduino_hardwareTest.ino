@@ -39,18 +39,41 @@ void setup()
 
 void loop()
 {
-  Serial.println(analogRead(0));
-   digitalWrite(PIN_DIR_A, LOW);  //Set motor direction, 1 low, 2 high
-  digitalWrite(PIN_DIR_B, LOW);  //Set motor direction, 3 high, 4 low
   
-
-  Serial.println(analogRead(0));
-  analogWrite(PIN_PWM_A, 100);  //set both motors to run at 100% duty cycle (fast)
-  analogWrite(PIN_PWM_B, 0);
-  while(!digitalRead (PIN_LIMITA_B))
+  resetPos();
+  while(true)
   {
-    delay(10);
+    delay(100);
   }
-  delay(1000);
+  
 }
 
+void resetPos()
+{
+  analogWrite(PIN_PWM_A, 200);
+  digitalWrite(PIN_DIR_A, LOW); // extend 
+  delay(2000);
+  digitalWrite(PIN_DIR_A, HIGH); // retract until tripped
+  
+  while(!digitalRead(PIN_LIMITA_B))
+  {
+    delay(100);
+  }
+  digitalWrite(PIN_PWM_A, 0);
+  digitalWrite(PIN_DIR_A, LOW); // extend 
+  analogWrite(PIN_PWM_A, 200);
+  
+  while(!digitalRead(PIN_LIMITA_A))
+  {
+    delay(100);
+  }
+  digitalWrite(PIN_PWM_A, 0);  
+  
+  digitalWrite(PIN_DIR_A, HIGH); // retract until tripped  
+  digitalWrite(PIN_PWM_A, 200);  
+   while(!digitalRead(PIN_LIMITA_B))
+  {
+    delay(100);
+  }
+  digitalWrite(PIN_PWM_A, 0);
+}
