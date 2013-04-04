@@ -12,12 +12,18 @@
 
 #define PIN_SENSOR_IR 14 // analog 0
 
+int REFLECT_MIN = 255; // as far away as possible 
+int REFLECT_MAX = 255; // as close as possible
+
+
+
 //#define SPEED 255
 // times in milliseconds for driving forward/backward
 int forwardTime = 0;  
 int backTime = 0;
 
 int motorSpeed = 180;
+int motorPosition = 0;
 
 // set up the pins
 void setup()
@@ -45,23 +51,21 @@ void setup()
 }
 
 void loop()
-{
-  
-  calibrate();
-  printStats();
-  
+{ 
   while(true)
   {
-    if(Serial.available())
-    {
-      calibrate();
-      printStats();
-      Serial.read();
-    }
-     else
-       delay(100);
+    int dist = analogRead(0);
+    if(dist < REFLECT_MIN) REFLECT_MIN = dist;
+    else if (dist > REFLECT_MAX) REFLECT_MAX = dist;
+    double destPos = getDestination();
+    if(destPos < 0) 
+       destPos = 0;
+  
+    delay(100);
   }
   
+  calibrate();
+  printStats();  
 }
 
 // measure how long it takes to extend and retract
@@ -78,6 +82,7 @@ void calibrate()
   {
     delay(1);
     counter++;
+    Serial.println(analogRead(0));
   }
   Serial.println(counter);
   digitalWrite(PIN_PWM_A, 0);
@@ -87,6 +92,7 @@ void calibrate()
   analogWrite(PIN_PWM_A, motorSpeed);
   while(!digitalRead(PIN_LIMITA_A))
   {
+    Serial.println(analogRead(0));
     counter++;
     delay(1);
   }
@@ -99,10 +105,12 @@ void calibrate()
   digitalWrite(PIN_PWM_A, motorSpeed);  
    while(!digitalRead(PIN_LIMITA_B))
   {
+    Serial.println(analogRead(0));
     delay(1);
     counter++;
   }
  
+  motorPosition = 0;
   backTime = counter;
   digitalWrite(PIN_PWM_A, 0);
   Serial.println(counter);
@@ -117,5 +125,34 @@ void printStats()
   Serial.print("ms, Forward time: ");
   Serial.print(forwardTime);
   Serial.print("ms");
+}
 
+void printSensors()
+{
+  Serial.print("Reflectance: ");
+  Serial.println(analogRead(0));
+}
+
+// returns a number, 0 to 100% for antenna extension based on reflectance 
+double getDestination()
+{
+  double destPos = 0; // destination postiion
+  double m = 100.0/(REFLECT_MAX - REFLECT_MIN);
+   double b = -1.0 * (m * REFLECT_MIN);
+
+  destPos = m * analogRead(0) + b;
+
+  Serial.print(m);
+    Serial.print(",");
+    Serial.print(b);
+    Serial.print(",");
+    Serial.print(analogRead(0));
+    Serial.print(",");
+    Serial.println(destPos);
+  return destPos;
+}
+
+void updateMotor(int distance)
+{
+  
 }
