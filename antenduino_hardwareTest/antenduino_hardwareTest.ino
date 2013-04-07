@@ -15,7 +15,7 @@
 #define PIN_SENSOR_IR 14 // analog 0
 
 int REFLECT_MIN = 255; // as far away as possible 
-int REFLECT_MAX = 255; // as close as possible
+int REFLECT_MAX = 0; // as close as possible
 
 
 
@@ -58,9 +58,8 @@ void loop()
   
   while(true)
   {
-    int dist = analogRead(0);
-    if(dist < REFLECT_MIN) REFLECT_MIN = dist;
-    else if (dist > REFLECT_MAX) REFLECT_MAX = dist;
+   // int dist = analogRead(0);
+  
     double destPos = getDestination();
     if(destPos < 0) 
        destPos = 0;
@@ -145,7 +144,11 @@ double getDestination()
     destPos += analogRead(0);
   }
   destPos /= 10;
-  destPos = m * analogRead(0) + b;
+  
+  if(destPos < REFLECT_MIN) REFLECT_MIN = destPos;
+  else if (destPos > REFLECT_MAX) REFLECT_MAX = destPos;
+  
+  destPos = (m * destPos) + b;
   
   
   Serial.print(m);
@@ -177,28 +180,27 @@ void updateMotor(double destPos)
      analogWrite(PIN_PWM_A, Speed);
      //Serial.println(Speed);
 
-      while(Position < destPos)
-      {
+      
         if(digitalRead(PIN_LIMITA_A))
         {
           Position = 100;
           destPos = 100;
           analogWrite(PIN_PWM_A, 0);
-          break;
+          return;
         }
         if(Position >= 100)        
         {
+          destPos = Position = 100;
           analogWrite(PIN_PWM_A, 0);        
-          break;
+          return;
         }
         else if (Position >= destPos)
           delay(100);
           Serial.print(forwardTime);
           Serial.print(",");
-          Position += 100.0 / forwardTime;
+          Position += 100.0 / (forwardTime/100);
           Serial.println(Position);
-          break;
-      }           
+          return;       
    }
    
    // retract
@@ -206,25 +208,26 @@ void updateMotor(double destPos)
    {
       digitalWrite(PIN_DIR_A, HIGH); // retract
       analogWrite(PIN_PWM_A, Speed);
-      while(Position > destPos)
-      {
+     
         if(digitalRead(PIN_LIMITA_B))
         {
           Position = 0;
           destPos = 0;
           analogWrite(PIN_PWM_A, 0);
-          break;
+          return;
         }
         if(Position <= 0)
         {
           analogWrite(PIN_PWM_A, 0);        
-          break;
+          return;
         }
         else if (Position > destPos)
+        {
           delay(100);
-          Position -= 1000.0 / backTime;
+          Position -= 100.0 / (backTime/100);
           return;
-      }           
+        }
+      
       //analogWrite(PIN_PWM_A, 0);
    }
 
