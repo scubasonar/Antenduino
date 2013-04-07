@@ -1,3 +1,5 @@
+#include "math.h"
+
 /* Pins */
 
 #define PIN_PWM_A     3  // motor A speed
@@ -22,8 +24,8 @@ int REFLECT_MAX = 255; // as close as possible
 int forwardTime = 0;  
 int backTime = 0;
 
-int motorSpeed = 180;
-int motorPosition = 0;
+int Speed = 230;
+double Position = 0;
 
 // set up the pins
 void setup()
@@ -52,6 +54,8 @@ void setup()
 
 void loop()
 { 
+  calibrate();
+  
   while(true)
   {
     int dist = analogRead(0);
@@ -60,8 +64,7 @@ void loop()
     double destPos = getDestination();
     if(destPos < 0) 
        destPos = 0;
-  
-    delay(100);
+    updateMotor(destPos);
   }
   
   calibrate();
@@ -73,7 +76,7 @@ void calibrate()
 {
   int counter = 0;
     
-  analogWrite(PIN_PWM_A, motorSpeed);
+  analogWrite(PIN_PWM_A, Speed);
   digitalWrite(PIN_DIR_A, LOW); // extend 
   delay(2000); // go forward for 2 seconds
   
@@ -84,12 +87,11 @@ void calibrate()
     counter++;
     Serial.println(analogRead(0));
   }
-  Serial.println(counter);
   digitalWrite(PIN_PWM_A, 0);
   
   counter = 0;
   digitalWrite(PIN_DIR_A, LOW); // extend 
-  analogWrite(PIN_PWM_A, motorSpeed);
+  analogWrite(PIN_PWM_A, Speed);
   while(!digitalRead(PIN_LIMITA_A))
   {
     Serial.println(analogRead(0));
@@ -98,11 +100,10 @@ void calibrate()
   }
   forwardTime = counter;
   digitalWrite(PIN_PWM_A, 0);  
-  Serial.println(counter);
   
   counter = 0;
   digitalWrite(PIN_DIR_A, HIGH); // retract until tripped  
-  digitalWrite(PIN_PWM_A, motorSpeed);  
+  digitalWrite(PIN_PWM_A, Speed);  
    while(!digitalRead(PIN_LIMITA_B))
   {
     Serial.println(analogRead(0));
@@ -110,10 +111,9 @@ void calibrate()
     counter++;
   }
  
-  motorPosition = 0;
+  Position = 0;
   backTime = counter;
   digitalWrite(PIN_PWM_A, 0);
-  Serial.println(counter);
 }
 
 
@@ -138,21 +138,94 @@ double getDestination()
 {
   double destPos = 0; // destination postiion
   double m = 100.0/(REFLECT_MAX - REFLECT_MIN);
-   double b = -1.0 * (m * REFLECT_MIN);
+  double b = -1.0 * (m * REFLECT_MIN);
 
+  for(int i = 0; i < 10; i++)
+  {
+    destPos += analogRead(0);
+  }
+  destPos /= 10;
   destPos = m * analogRead(0) + b;
-
+  
+  
   Serial.print(m);
     Serial.print(",");
     Serial.print(b);
     Serial.print(",");
     Serial.print(analogRead(0));
     Serial.print(",");
-    Serial.println(destPos);
+    Serial.print(destPos);
+    Serial.print(",");
+    Serial.println(Position);
   return destPos;
 }
 
-void updateMotor(int distance)
+void updateMotor(double destPos)
 {
-  
+  Serial.println("updating motors");
+   // do nothing
+   if(abs(destPos-Position) < 2)
+   {  
+     analogWrite(PIN_PWM_A, 0);
+     return; 
+   }
+   
+   // extend
+   else if (destPos > Position)
+   {
+     digitalWrite(PIN_DIR_A, LOW); // extend 
+     analogWrite(PIN_PWM_A, Speed);
+     //Serial.println(Speed);
+
+      while(Position < destPos)
+      {
+        if(digitalRead(PIN_LIMITA_A))
+        {
+          Position = 100;
+          destPos = 100;
+          analogWrite(PIN_PWM_A, 0);
+          break;
+        }
+        if(Position >= 100)        
+        {
+          analogWrite(PIN_PWM_A, 0);        
+          break;
+        }
+        else if (Position >= destPos)
+          delay(100);
+          Serial.print(forwardTime);
+          Serial.print(",");
+          Position += 100.0 / forwardTime;
+          Serial.println(Position);
+          break;
+      }           
+   }
+   
+   // retract
+   else if (destPos < Position)
+   {
+      digitalWrite(PIN_DIR_A, HIGH); // retract
+      analogWrite(PIN_PWM_A, Speed);
+      while(Position > destPos)
+      {
+        if(digitalRead(PIN_LIMITA_B))
+        {
+          Position = 0;
+          destPos = 0;
+          analogWrite(PIN_PWM_A, 0);
+          break;
+        }
+        if(Position <= 0)
+        {
+          analogWrite(PIN_PWM_A, 0);        
+          break;
+        }
+        else if (Position > destPos)
+          delay(100);
+          Position -= 1000.0 / backTime;
+          return;
+      }           
+      //analogWrite(PIN_PWM_A, 0);
+   }
+
 }
