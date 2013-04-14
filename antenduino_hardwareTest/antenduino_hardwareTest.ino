@@ -14,8 +14,8 @@
 
 #define PIN_SENSOR_IR 14 // analog 0
 
-int REFLECT_MIN = 255; // as far away as possible 
-int REFLECT_MAX = 0; // as close as possible
+int REFLECT_MIN = 0; // as far away as possible 
+int REFLECT_MAX = 500; // as close as possible
 
 
 
@@ -26,6 +26,7 @@ int backTime = 0;
 
 int Speed = 230;
 double Position = 0;
+double destPos = 0;
 
 // set up the pins
 void setup()
@@ -50,24 +51,23 @@ void setup()
   pinMode(PIN_LIMITB_B, INPUT);
   digitalWrite(PIN_LIMITB_B, HIGH);
   Serial.begin(9600);
+  
+  
+ delay(20000);
+ calibrate();
 }
 
+// our main tracking loop that gets called over and over!
 void loop()
 { 
-  calibrate();
   
-  while(true)
-  {
-   // int dist = analogRead(0);
-  
-    double destPos = getDestination();
+    destPos = getDestination();
     if(destPos < 0) 
        destPos = 0;
+    if(destPos > 100)
+      destPos = 100;
+      
     updateMotor(destPos);
-  }
-  
-  calibrate();
-  printStats();  
 }
 
 // measure how long it takes to extend and retract
@@ -136,17 +136,14 @@ void printSensors()
 double getDestination()
 {
   double destPos = 0; // destination postiion
-  double m = 100.0/(REFLECT_MAX - REFLECT_MIN);
-  double b = -1.0 * (m * REFLECT_MIN);
+  double m = 100.0/REFLECT_MAX;
+  double b = -1.0 * m;
 
   for(int i = 0; i < 10; i++)
   {
     destPos += analogRead(0);
   }
   destPos /= 10;
-  
-  if(destPos < REFLECT_MIN) REFLECT_MIN = destPos;
-  else if (destPos > REFLECT_MAX) REFLECT_MAX = destPos;
   
   destPos = (m * destPos) + b;
   
@@ -163,72 +160,56 @@ double getDestination()
   return destPos;
 }
 
+// returns current estimated position, drives antenna towards target
+// arguments: target is where you want the antenna to go
+double driveToTarget(double target, double pos)
+{
+  
+}
+
+
 void updateMotor(double destPos)
 {
-  Serial.println("updating motors");
-   // do nothing
+   analogWrite(PIN_PWM_A, 0);
+   analogWrite(PIN_PWM_B, 0);
+    Serial.println("updating motors");
+   
+   // do nothing, destination too close to current position
    if(abs(destPos-Position) < 2)
    {  
-     analogWrite(PIN_PWM_A, 0);
+     if(!digitalRead(PIN_LIMITA_A) && destPos < 5)
+     {
+       digitalWrite(PIN_DIR_A, LOW); // retract
+        analogWrite(PIN_PWM_A, SPEED);
+     }
      return; 
    }
    
-   // extend
+   // extend because destination is greater than current position
    else if (destPos > Position)
-   {
-     digitalWrite(PIN_DIR_A, LOW); // extend 
-     analogWrite(PIN_PWM_A, Speed);
-     //Serial.println(Speed);
-
-      
-        if(digitalRead(PIN_LIMITA_A))
-        {
-          Position = 100;
-          destPos = 100;
-          analogWrite(PIN_PWM_A, 0);
-          return;
-        }
-        if(Position >= 100)        
-        {
-          destPos = Position = 100;
-          analogWrite(PIN_PWM_A, 0);        
-          return;
-        }
-        else if (Position >= destPos)
-          delay(100);
-          Serial.print(forwardTime);
-          Serial.print(",");
-          Position += 100.0 / (forwardTime/100);
-          Serial.println(Position);
-          return;       
+   { 
+     digitalWrite(PIN_DIR_A, LOW); // retract
+      digitalWrite(PIN_DIR_B, LOW); // retract
+     // check limit switches and then drive motors
+     if(!digitalRead(PIN_LIMITA_A))
+     {
+        analogWrite(PIN_PWM_A, SPEED);
+     }
+     
+     Position++;       
    }
    
    // retract
    else if (destPos < Position)
    {
       digitalWrite(PIN_DIR_A, HIGH); // retract
-      analogWrite(PIN_PWM_A, Speed);
+      digitalWrite(PIN_DIR_B, HIGH); // retract
      
-        if(digitalRead(PIN_LIMITA_B))
+        if(!digitalRead(PIN_LIMITA_B))
         {
-          Position = 0;
-          destPos = 0;
-          analogWrite(PIN_PWM_A, 0);
-          return;
+          analogWrite(PIN_PWM_A, Speed);
         }
-        if(Position <= 0)
-        {
-          analogWrite(PIN_PWM_A, 0);        
-          return;
-        }
-        else if (Position > destPos)
-        {
-          delay(100);
-          Position -= 100.0 / (backTime/100);
-          return;
-        }
-      
-      //analogWrite(PIN_PWM_A, 0);
-   }
-
+        
+        Position--;
+   }     
 }
