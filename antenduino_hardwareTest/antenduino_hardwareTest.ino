@@ -69,7 +69,7 @@ void loop()
     if (destPos > Position)
     {
       digitalWrite(PIN_DIR_A, LOW); // extend 
-      digitalWrite(PIN_DIR_B, LOW); // extend 
+      digitalWrite(PIN_DIR_B, HIGH); // extend 
       analogWrite(PIN_PWM_A, Speed);
       analogWrite(PIN_PWM_B, Speed);
 
@@ -100,7 +100,7 @@ void loop()
     else if(destPos < Position)
     {
       digitalWrite(PIN_DIR_A, HIGH); // extend 
-      digitalWrite(PIN_DIR_B, HIGH); // extend 
+      digitalWrite(PIN_DIR_B, LOW); // extend 
       analogWrite(PIN_PWM_A, Speed);
       analogWrite(PIN_PWM_B, Speed);
 
@@ -182,10 +182,10 @@ void calibrate()
   counter = 0;
 
   analogWrite(PIN_PWM_B, Speed);
-  digitalWrite(PIN_DIR_B, LOW); // extend 
+  digitalWrite(PIN_DIR_B, HIGH); // extend 
   delay(2000); // go forward for 2 seconds
 
-  digitalWrite(PIN_DIR_B, HIGH); // retract until limit trigger
+  digitalWrite(PIN_DIR_B, LOW); // retract until limit trigger
   while(!digitalRead(PIN_LIMITB_B)) 
   {
     delay(1);
@@ -195,7 +195,7 @@ void calibrate()
   digitalWrite(PIN_PWM_B, 0);
 
   counter = 0;
-  digitalWrite(PIN_DIR_B, LOW); // extend 
+  digitalWrite(PIN_DIR_B, HIGH); // extend 
   analogWrite(PIN_PWM_B, Speed);
   while(!digitalRead(PIN_LIMITB_A))
   {
@@ -207,7 +207,7 @@ void calibrate()
   digitalWrite(PIN_PWM_B, 0);  
 
   counter = 0;
-  digitalWrite(PIN_DIR_B, HIGH); // retract until tripped  
+  digitalWrite(PIN_DIR_B, LOW); // retract until tripped  
   digitalWrite(PIN_PWM_B, Speed);  
   while(!digitalRead(PIN_LIMITB_B))
   {
