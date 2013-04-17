@@ -77,7 +77,9 @@ void loop()
       if(!digitalRead(PIN_LIMITA_A))
       {
         Position += 0.1;
-        delay(10);
+        delay(forwardTime / 1000);
+        Serial.println(forwardTime);
+        Serial.println(backTime);
       }
       else
       {
@@ -105,7 +107,7 @@ void loop()
       if(!digitalRead(PIN_LIMITA_B))
       {         
         Position -= .1;
-        delay(10);
+        delay(backTime / 1000);
       }
       else
       {
@@ -201,7 +203,7 @@ void calibrate()
     counter++;
     delay(1);
   }
-  forwardTime = counter;
+  //forwardTime = counter;
   digitalWrite(PIN_PWM_B, 0);  
 
   counter = 0;
@@ -215,7 +217,7 @@ void calibrate()
   }
 
   Position = 0;
-  backTime = counter;
+  //backTime = counter;
   digitalWrite(PIN_PWM_B, 0);
 }
 
