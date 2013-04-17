@@ -24,7 +24,7 @@ int REFLECT_MAX = 500; // as close as possible
 int forwardTime = 0;  
 int backTime = 0;
 
-int Speed = 230;
+int Speed = 255;
 double Position = 0;
 double destPos = 0;
 
@@ -59,15 +59,84 @@ void setup()
 
 // our main tracking loop that gets called over and over!
 void loop()
-{ 
-  
-    destPos = getDestination();
-    if(destPos < 0) 
-       destPos = 0;
-    if(destPos > 100)
-      destPos = 100;
+{
+
+  Serial.println("Done driving");
+            analogWrite(PIN_PWM_A, 0);
+  bool driving = false;
+   destPos = getDestination();
+    
+    while(abs(destPos-Position) > 2)
+    {
+      /* retract
+      if(destPos < Position)
+      {
+        if(digitalRead(PIN_LIMITA_B)) // motor A is at its bottom
+        { 
+          Position = 0;
+          analogWrite(PIN_PWM_A, 0);
+          driving = false;
+        }
+        else
+        {
+          digitalWrite(PIN_DIR_A, HIGH);
+          if(!driving)
+          {
+             analogWrite(PIN_PWM_A, SPEED);       
+              driving = true;
+          }
+          Position--;
+        }
+          
+      }*/
       
-    updateMotor(destPos);
+      // extend
+
+      
+      else if (destPos > Position)
+      {
+        digitalWrite(PIN_DIR_A, LOW); // extend 
+        
+        analogWrite(PIN_PWM_A, Speed);
+        if(!digitalRead(PIN_LIMITA_A))
+        {
+          Serial.println(analogRead(0));
+           Position++;
+          delay(100);
+        }
+        else
+        {
+          Position = 100;
+          analogWrite(PIN_PWM_A, 0);
+        }        
+      }
+      else if(destPos < Position)
+      {
+        digitalWrite(PIN_DIR_A, HIGH); // extend 
+        analogWrite(PIN_PWM_A, Speed);
+        if(!digitalRead(PIN_LIMITA_B))
+        {
+          Serial.println(analogRead(0));
+           Position--;
+          delay(100);
+        }
+        else
+        {
+          Position = 0;
+          analogWrite(PIN_PWM_A, 0);
+        }        
+      }
+      
+      
+      destPos = getDestination();
+      Serial.print("Destionation: ");
+        Serial.print(destPos);
+    Serial.print(", Current: " );
+    Serial.println(Position);
+    }
+  /*  */
+
+
 }
 
 // measure how long it takes to extend and retract
@@ -146,9 +215,13 @@ double getDestination()
   destPos /= 10;
   
   destPos = (m * destPos) + b;
+
+  if(destPos < 0) 
+       destPos = 0;
+    if(destPos > 100)
+      destPos = 100;
   
-  
-  Serial.print(m);
+  /*Serial.print(m);
     Serial.print(",");
     Serial.print(b);
     Serial.print(",");
@@ -157,6 +230,7 @@ double getDestination()
     Serial.print(destPos);
     Serial.print(",");
     Serial.println(Position);
+    */
   return destPos;
 }
 
@@ -170,46 +244,84 @@ double driveToTarget(double target, double pos)
 
 void updateMotor(double destPos)
 {
-   analogWrite(PIN_PWM_A, 0);
-   analogWrite(PIN_PWM_B, 0);
-    Serial.println("updating motors");
+     digitalWrite(PIN_DIR_A, LOW); // extend
+     
+     if(!digitalRead(PIN_LIMITA_A))
+     {
+        Serial.println("extending"); 
+        if(analogRead(PIN_PWM_A) < SPEED)
+          analogWrite(PIN_PWM_A, SPEED);
+        delay(200);
+        Position++;      
+     }
+     else
+     {
+       analogWrite(PIN_PWM_A, 0);
+     }
+
+  /*
+   analogWrite(PIN_PWM_A, SPEED);   
+   //analogWrite(PIN_PWM_B, 0);
+  //  Serial.println("updating motors");
    
    // do nothing, destination too close to current position
    if(abs(destPos-Position) < 2)
-   {  
+   {
+     Serial.println("doing nothing");  
      if(!digitalRead(PIN_LIMITA_A) && destPos < 5)
      {
        digitalWrite(PIN_DIR_A, LOW); // retract
-        analogWrite(PIN_PWM_A, SPEED);
+     }
+     else
+     {
+       Serial.println("stopped"); 
+       analogWrite(PIN_PWM_A, 0);
      }
      return; 
    }
    
    // extend because destination is greater than current position
    else if (destPos > Position)
-   { 
-     digitalWrite(PIN_DIR_A, LOW); // retract
-      digitalWrite(PIN_DIR_B, LOW); // retract
+   {
+     digitalWrite(PIN_DIR_A, LOW); // extend
+     digitalWrite(PIN_DIR_B, LOW); // extend
      // check limit switches and then drive motors
      if(!digitalRead(PIN_LIMITA_A))
      {
-        analogWrite(PIN_PWM_A, SPEED);
+        Serial.println("extending"); 
+        //analogWrite(PIN_PWM_A, SPEED);
+        delay(200);
+        Position++;      
+     }
+     else
+     {
+       Position = 100;
+       analogWrite(PIN_PWM_A, 0);
+       Serial.println("stopped"); 
      }
      
-     Position++;       
+ 
    }
    
    // retract
    else if (destPos < Position)
    {
+
       digitalWrite(PIN_DIR_A, HIGH); // retract
       digitalWrite(PIN_DIR_B, HIGH); // retract
      
         if(!digitalRead(PIN_LIMITA_B))
         {
+          Serial.println("retracting");
           analogWrite(PIN_PWM_A, Speed);
         }
-        
-        Position--;
-   }     
+        else        
+        {
+          Serial.println("stopped"); 
+          analogWrite(PIN_PWM_A, 0);
+          Position = 0; 
+        }       
+   }
+   */
+
 }
