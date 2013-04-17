@@ -76,8 +76,8 @@ void loop()
       // antenna A max limit switch
       if(!digitalRead(PIN_LIMITA_A))
       {
-        Position++;
-        delay(100);
+        Position += 0.1;
+        delay(10);
       }
       else
       {
@@ -104,8 +104,8 @@ void loop()
 
       if(!digitalRead(PIN_LIMITA_B))
       {         
-        Position--;
-        delay(100);
+        Position -= .1;
+        delay(10);
       }
       else
       {
