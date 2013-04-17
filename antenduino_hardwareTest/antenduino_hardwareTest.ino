@@ -93,14 +93,16 @@ void loop()
       // extend
 
       
-      else if (destPos > Position)
+      if (destPos > Position)
       {
         digitalWrite(PIN_DIR_A, LOW); // extend 
-        
+        digitalWrite(PIN_DIR_B, LOW); // extend 
         analogWrite(PIN_PWM_A, Speed);
+        analogWrite(PIN_PWM_B, Speed);
+        
+        // antenna A max limit switch
         if(!digitalRead(PIN_LIMITA_A))
         {
-          Serial.println(analogRead(0));
            Position++;
           delay(100);
         }
@@ -108,22 +110,43 @@ void loop()
         {
           Position = 100;
           analogWrite(PIN_PWM_A, 0);
+        }
+  
+        // antenna B max limit switch
+        if(!digitalRead(PIN_LIMITB_A))
+        {        
+        }
+        else
+        {         
+          analogWrite(PIN_PWM_B, 0);
         }        
       }
+      
       else if(destPos < Position)
       {
         digitalWrite(PIN_DIR_A, HIGH); // extend 
+        digitalWrite(PIN_DIR_B, HIGH); // extend 
         analogWrite(PIN_PWM_A, Speed);
+        analogWrite(PIN_PWM_B, Speed);
+        
         if(!digitalRead(PIN_LIMITA_B))
-        {
-          Serial.println(analogRead(0));
-           Position--;
+        {         
+          Position--;
           delay(100);
         }
         else
         {
           Position = 0;
           analogWrite(PIN_PWM_A, 0);
+        }
+        
+        // antenna B bottom limit
+        if(!digitalRead(PIN_LIMITB_B))
+        {
+        }
+        else
+        {
+          analogWrite(PIN_PWM_B, 0);
         }        
       }
       
@@ -182,6 +205,48 @@ void calibrate()
   Position = 0;
   backTime = counter;
   digitalWrite(PIN_PWM_A, 0);
+  
+  // antenna B
+  counter = 0;
+    
+  analogWrite(PIN_PWM_B, Speed);
+  digitalWrite(PIN_DIR_B, LOW); // extend 
+  delay(2000); // go forward for 2 seconds
+  
+  digitalWrite(PIN_DIR_B, HIGH); // retract until limit trigger
+  while(!digitalRead(PIN_LIMITB_B)) 
+  {
+    delay(1);
+    counter++;
+    Serial.println(analogRead(0));
+  }
+  digitalWrite(PIN_PWM_B, 0);
+  
+  counter = 0;
+  digitalWrite(PIN_DIR_B, LOW); // extend 
+  analogWrite(PIN_PWM_B, Speed);
+  while(!digitalRead(PIN_LIMITB_A))
+  {
+    Serial.println(analogRead(0));
+    counter++;
+    delay(1);
+  }
+  forwardTime = counter;
+  digitalWrite(PIN_PWM_B, 0);  
+  
+  counter = 0;
+  digitalWrite(PIN_DIR_B, HIGH); // retract until tripped  
+  digitalWrite(PIN_PWM_B, Speed);  
+   while(!digitalRead(PIN_LIMITB_B))
+  {
+    Serial.println(analogRead(0));
+    delay(1);
+    counter++;
+  }
+ 
+  Position = 0;
+  backTime = counter;
+  digitalWrite(PIN_PWM_B, 0);
 }
 
 
