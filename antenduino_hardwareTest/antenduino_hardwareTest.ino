@@ -61,10 +61,11 @@ void setup()
 void loop()
 { 
   analogWrite(PIN_PWM_A, 0);
+  analogWrite(PIN_PWM_B, 0);
   bool driving = false;
   destPos = getDestination();
 
-  while(abs(destPos-Position) > 2)
+  while(abs(destPos-Position) > 4)
   { 
     if (destPos > Position)
     {
@@ -245,11 +246,11 @@ double getDestination()
   double m = 100.0/REFLECT_MAX;
   double b = -1.0 * m;
 
-  for(int i = 0; i < 10; i++)
+  for(unsigned int i = 0; i < 100; i++)
   {
     destPos += analogRead(0);
   }
-  destPos /= 10;
+  destPos /= 100;
 
   destPos = (m * destPos) + b;
 
