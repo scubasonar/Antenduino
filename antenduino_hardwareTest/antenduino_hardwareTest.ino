@@ -14,8 +14,8 @@
 
 #define PIN_SENSOR_IR 14 // analog 0
 
-int REFLECT_MIN = 0; // as far away as possible 
-int REFLECT_MAX = 500; // as close as possible
+int REFLECT_MIN = 80; // as far away as possible 
+int REFLECT_MAX = 200; // as close as possible
 
 
 
@@ -64,21 +64,80 @@ void loop()
   analogWrite(PIN_PWM_B, 0);
   bool driving = false;
   destPos = getDestination();
-
-  while(abs(destPos-Position) > 4)
+  
+   destPos = getDestination();
+   Serial.print("Destionation: ");
+   Serial.print(destPos);
+   Serial.print(", Current: " );
+   Serial.println(Position);
+  
+  
+  // --------- begin zeroing section
+  // this section makes sure we fully retract when idle
+  if((destPos == 0) && (Position <= 3))
+  {
+    digitalWrite(PIN_DIR_A, LOW); // retract 
+    digitalWrite(PIN_DIR_B, HIGH); // retract 
+    bool drive = false;
+    
+    Serial.println("I need to be at 0!");
+    // no limit triggered
+    if(!digitalRead(PIN_LIMITA_B))
+    {
+      analogWrite(PIN_PWM_A, Speed);             
+      drive = true;
+    }       
+      
+    if(!digitalRead(PIN_LIMITB_B))
+    {
+      analogWrite(PIN_PWM_B, Speed);
+      drive = true;
+    }  
+      
+    if(drive)
+    {
+      if(Position > 0)
+        Position -= .8;
+       delay(4 * backTime / 1000.0);      
+      analogWrite(PIN_PWM_A, 0);
+      analogWrite(PIN_PWM_B, 0);                  
+    }
+  } // ------------- end zeroing section
+  
+  while(abs(destPos-Position) > 2)
   { 
+    destPos = getDestination();
+    Serial.print("Destionation: ");
+    Serial.print(destPos);
+    Serial.print(", Current: " );
+    Serial.println(Position);
+    
+   /* if((Position > 0) && (Position <= 4) && (destPos == 0))
+    {
+      Serial.println("Special retraction!");
+      digitalWrite(PIN_DIR_A, LOW); // retract 
+      digitalWrite(PIN_DIR_B, HIGH); // retract 
+      analogWrite(PIN_PWM_A, Speed);
+      analogWrite(PIN_PWM_B, Speed);
+
+      delay(1000);
+      Position -=1;
+      analogWrite(PIN_PWM_A, 0);
+      analogWrite(PIN_PWM_B, 0);  
+    }*/
+  
     if (destPos > Position)
     {
-      digitalWrite(PIN_DIR_A, LOW); // extend 
-      digitalWrite(PIN_DIR_B, HIGH); // extend 
+      digitalWrite(PIN_DIR_A, HIGH); // extend 
+      digitalWrite(PIN_DIR_B, LOW); // extend 
       analogWrite(PIN_PWM_A, Speed);
       analogWrite(PIN_PWM_B, Speed);
 
       // antenna A max limit switch
       if(!digitalRead(PIN_LIMITA_A))
       {
-        Position += 0.1;
-        delay(forwardTime / 1000);
+        Position += 0.2;
+        delay(forwardTime / 1000.0);
         Serial.println(forwardTime);
         Serial.println(backTime);
       }
@@ -95,20 +154,21 @@ void loop()
       else
       {         
         analogWrite(PIN_PWM_B, 0);
+        delay(100);
       }        
     }
       
     else if(destPos < Position)
     {
-      digitalWrite(PIN_DIR_A, HIGH); // extend 
-      digitalWrite(PIN_DIR_B, LOW); // extend 
+      digitalWrite(PIN_DIR_A, LOW); // retract 
+      digitalWrite(PIN_DIR_B, HIGH); // retract 
       analogWrite(PIN_PWM_A, Speed);
       analogWrite(PIN_PWM_B, Speed);
 
       if(!digitalRead(PIN_LIMITA_B))
       {         
-        Position -= .1;
-        delay(backTime / 1000);
+        Position -= .2;
+        delay(backTime / 1000.0);
       }
       else
       {
@@ -123,16 +183,11 @@ void loop()
       else
       {
         analogWrite(PIN_PWM_B, 0);
+        delay(100);
       }        
-    }
-
-
-    destPos = getDestination();
-    Serial.print("Destionation: ");
-    Serial.print(destPos);
-    Serial.print(", Current: " );
-    Serial.println(Position);
+    }  
   }
+  
 }
 
 // measure how long it takes to extend and retract
@@ -141,10 +196,10 @@ void calibrate()
   int counter = 0;
 
   analogWrite(PIN_PWM_A, Speed);
-  digitalWrite(PIN_DIR_A, LOW); // extend 
+  digitalWrite(PIN_DIR_A, HIGH); // extend 
   delay(2000); // go forward for 2 seconds
 
-  digitalWrite(PIN_DIR_A, HIGH); // retract until limit trigger
+  digitalWrite(PIN_DIR_A, LOW); // retract until limit trigger
   while(!digitalRead(PIN_LIMITA_B)) 
   {
     delay(1);
@@ -154,7 +209,7 @@ void calibrate()
   digitalWrite(PIN_PWM_A, 0);
 
   counter = 0;
-  digitalWrite(PIN_DIR_A, LOW); // extend 
+  digitalWrite(PIN_DIR_A, HIGH); // extend 
   analogWrite(PIN_PWM_A, Speed);
   while(!digitalRead(PIN_LIMITA_A))
   {
@@ -166,7 +221,7 @@ void calibrate()
   digitalWrite(PIN_PWM_A, 0);  
 
   counter = 0;
-  digitalWrite(PIN_DIR_A, HIGH); // retract until tripped  
+  digitalWrite(PIN_DIR_A, LOW); // retract until tripped  
   digitalWrite(PIN_PWM_A, Speed);  
   while(!digitalRead(PIN_LIMITA_B))
   {
@@ -183,10 +238,10 @@ void calibrate()
   counter = 0;
 
   analogWrite(PIN_PWM_B, Speed);
-  digitalWrite(PIN_DIR_B, HIGH); // extend 
+  digitalWrite(PIN_DIR_B, LOW); // extend 
   delay(2000); // go forward for 2 seconds
 
-  digitalWrite(PIN_DIR_B, LOW); // retract until limit trigger
+  digitalWrite(PIN_DIR_B, HIGH); // retract until limit trigger
   while(!digitalRead(PIN_LIMITB_B)) 
   {
     delay(1);
@@ -196,7 +251,7 @@ void calibrate()
   digitalWrite(PIN_PWM_B, 0);
 
   counter = 0;
-  digitalWrite(PIN_DIR_B, HIGH); // extend 
+  digitalWrite(PIN_DIR_B, LOW); // extend 
   analogWrite(PIN_PWM_B, Speed);
   while(!digitalRead(PIN_LIMITB_A))
   {
@@ -208,7 +263,7 @@ void calibrate()
   digitalWrite(PIN_PWM_B, 0);  
 
   counter = 0;
-  digitalWrite(PIN_DIR_B, LOW); // retract until tripped  
+  digitalWrite(PIN_DIR_B, HIGH); // retract until tripped  
   digitalWrite(PIN_PWM_B, Speed);  
   while(!digitalRead(PIN_LIMITB_B))
   {
@@ -243,8 +298,8 @@ void printSensors()
 double getDestination()
 {
   double destPos = 0; // destination postiion
-  double m = 100.0/REFLECT_MAX;
-  double b = -1.0 * m;
+  double m = 100.0/(REFLECT_MAX-REFLECT_MIN);
+  double b = -1.0 * (m*REFLECT_MIN);
 
   for(unsigned int i = 0; i < 100; i++)
   {
